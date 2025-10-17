@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Xianghuawe\Archivable;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use LogicException;
 
@@ -14,10 +15,9 @@ trait Archivable
     /**
      * archive all archivable models in the database.
      *
-     * @param int $chunkSize
      * @return int
      */
-    public function archiveAll(int $chunkSize = null)
+    public function archiveAll(?int $chunkSize = null)
     {
         $chunkSize = $chunkSize ?? config('archive.chunk_size');
         $total = $this->archivable()->count();
@@ -26,13 +26,11 @@ trait Archivable
         }
         $archiveTableName = $this->getTable();
         if (Schema::connection(config('archive.db'))->hasTable($archiveTableName)) {
-            if (empty($this->getStructureDiff($this->getTable()))) {
-                Log::warning('archive table ' . $archiveTableName . ' table structure is changed');
-                return 0;
+            if (!empty($this->getStructureDiff($this->getTable()))) {
+                throw new LogicException('archive table ' . $archiveTableName . ' table structure is changed');
             }
         } else {
-            Log::warning('archive table ' . $archiveTableName . ' does not exist');
-            return 0;
+            throw new LogicException('archive table ' . $archiveTableName . ' does not exist');
         }
 
         $totalArchived = 0;
@@ -49,6 +47,7 @@ trait Archivable
         }
 
         event(new ModelsArchived(static::class, $totalArchived));
+
         return $totalArchived;
     }
 
@@ -70,6 +69,7 @@ trait Archivable
     public function archive()
     {
         $archiveTableName = $this->getTable();
+
         return DB::connection(config('archive.db'))->table($archiveTableName)->insertOrIgnore($this->attributes);
     }
 }

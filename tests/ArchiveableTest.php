@@ -1,16 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Xianghuawe\Archivable\Tests;
 
-use Illuminate\Support\Facades\{DB, Event};
 use Illuminate\Database\Eloquent\Model;
-use Xianghuawe\Archivable\{Archivable, ModelsArchived};
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Xianghuawe\Archivable\Archivable;
+use Xianghuawe\Archivable\ModelsArchived;
 
 // 创建测试模型
 class TestModel extends Model
 {
     use Archivable;
+
     protected $table = 'test_models';
 
     /**
@@ -43,7 +48,7 @@ class ArchiveTest extends TestCase
         TestModel::insert($data);
 
         // 执行备份
-        $archiveModel = new TestModel();
+        $archiveModel = new TestModel;
         $needBackupCount = $archiveModel->archivable()->count();
         $this->assertEquals($needBackupCount, 0, '备份数据数量与模型数量不一致');
         $archiveModel->archiveAll();
@@ -59,7 +64,7 @@ class ArchiveTest extends TestCase
             $eventBackedUp += $event->count;
         });
 
-        $archiveModel = new TestModel();
+        $archiveModel = new TestModel;
 
         // 准备测试数据
         $backupDataCount = 0;
@@ -68,7 +73,7 @@ class ArchiveTest extends TestCase
                 'name' => 'fake data',
                 'created_at' => now(),
                 'data' => json_encode(['key' => 'value']),
-            ]
+            ],
         ];
         for ($i = 0; $i < 10000; $i++) {
             $c = now()->startOfMonth()->subMonths(6)->addSeconds($i);

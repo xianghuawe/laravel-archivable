@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Xianghuawe\Archivable;
 
 use Illuminate\Contracts\Support\DeferrableProvider;

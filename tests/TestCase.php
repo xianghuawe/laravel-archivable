@@ -1,14 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Xianghuawe\Archivable\Tests;
 
+use Dotenv\Dotenv;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 use Xianghuawe\Archivable\ServiceProvider;
-use Dotenv\Dotenv;
 
 /**
  * 基础测试类：用于初始化测试环境，不包含具体测试方法
+ *
  * @testdox 基础测试环境配置类
  */
 abstract class TestCase extends OrchestraTestCase
@@ -17,12 +20,9 @@ abstract class TestCase extends OrchestraTestCase
 
     /**
      *  Setup the test environment.
-     *
-     * @return void
      */
-    protected function setUp(): void
-    { // Load .env.testing file
-        $dotenv = Dotenv::createImmutable(__DIR__ . '/../');
+    protected function setUp(): void // Load .env.testing file
+    {$dotenv = Dotenv::createImmutable(__DIR__ . '/../');
         $dotenv->load();
         parent::setUp();
 
@@ -64,7 +64,6 @@ abstract class TestCase extends OrchestraTestCase
     /**
      * 在指定数据库连接上运行迁移
      *
-     * @param string $connection
      * @return void
      */
     protected function runMigrationsOnConnection(string $connection)

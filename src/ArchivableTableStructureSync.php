@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Xianghuawe\Archivable;
 
 use Illuminate\Support\Facades\DB;
@@ -90,7 +92,7 @@ trait ArchivableTableStructureSync
                 $diff[] = [
                     'type' => 'drop_column',
                     'sql' => "DROP COLUMN `{$colName}`",
-                    'warning' => '删除字段可能导致数据丢失，默认不执行'
+                    'warning' => '删除字段可能导致数据丢失，默认不执行',
                 ];
             }
         }
@@ -102,7 +104,7 @@ trait ArchivableTableStructureSync
             if (!isset($targetIndexes[$indexName])) {
                 $diff[] = [
                     'type' => 'add_index',
-                    'sql' => $sourceIndex['sql']
+                    'sql' => $sourceIndex['sql'],
                 ];
             }
         }
@@ -113,7 +115,7 @@ trait ArchivableTableStructureSync
     /**
      * 获取表字段信息（类型、长度等）
      */
-    protected function getTableColumns(string|null $conn, string $table): array
+    protected function getTableColumns(?string $conn, string $table): array
     {
         $columns = [];
         $rows = DB::connection($conn)->select("DESCRIBE `{$table}`");
@@ -122,26 +124,30 @@ trait ArchivableTableStructureSync
                 'type' => $row->Type, // 如 'int(11)', 'varchar(255)'
                 'null' => $row->Null === 'YES',
                 'default' => $row->Default,
-                'extra' => $row->Extra
+                'extra' => $row->Extra,
             ];
         }
+
         return $columns;
     }
 
     /**
      * 获取表索引信息
      */
-    protected function getTableIndexes(string|null $conn, string $table): array
+    protected function getTableIndexes(?string $conn, string $table): array
     {
         $indexes = [];
         $rows = DB::connection($conn)->select("SHOW INDEX FROM `{$table}`");
         foreach ($rows as $row) {
-            if ($row->Key_name === 'PRIMARY') continue; // 主键通常在创建表时已处理
+            if ($row->Key_name === 'PRIMARY') {
+                continue;
+            } // 主键通常在创建表时已处理
             $indexes[$row->Key_name] = [
                 'columns' => $row->Column_name,
-                'sql' => "ADD INDEX `{$row->Key_name}` (`{$row->Column_name}`)"
+                'sql' => "ADD INDEX `{$row->Key_name}` (`{$row->Column_name}`)",
             ];
         }
+
         return $indexes;
     }
 
@@ -181,7 +187,7 @@ trait ArchivableTableStructureSync
 
         return [
             'type' => 'add_column',
-            'sql' => "ADD COLUMN `{$colName}` {$columnDef}"
+            'sql' => "ADD COLUMN `{$colName}` {$columnDef}",
         ];
     }
 
@@ -204,7 +210,7 @@ trait ArchivableTableStructureSync
 
         return [
             'type' => 'modify_column',
-            'sql' => "MODIFY COLUMN `{$colName}` {$columnDef}"
+            'sql' => "MODIFY COLUMN `{$colName}` {$columnDef}",
         ];
     }
 
@@ -217,6 +223,7 @@ trait ArchivableTableStructureSync
         if ($targetDefault === null && $sourceDefault === null) {
             return false;
         }
+
         return $targetDefault != $sourceDefault;
     }
 }

@@ -24,7 +24,8 @@
   },
   "require-dev": {
     "phpunit/phpunit": "^9.5",
-    "orchestra/testbench": "^7.0"
+    "orchestra/testbench": "^7.0",
+    "laravel/pint": "^1.0"
   },
   "suggest": {},
   "autoload": {
@@ -54,6 +55,8 @@
     "platform-check": false
   },
   "scripts": {
-    "test": "vendor/bin/phpunit"
+    "test": "vendor/bin/phpunit",
+    "format": "vendor/bin/pint",
+    "format-check": "vendor/bin/pint --test"
   }
 }

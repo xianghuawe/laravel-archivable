@@ -1,16 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Xianghuawe\Archivable\Console;
 
+use Illuminate\Console\Command;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
-use Illuminate\Console\Command;
 use Symfony\Component\Finder\Finder;
-use Illuminate\Contracts\Events\Dispatcher;
-use Xianghuawe\Archivable\{
-    Archivable,
-    ModelsArchived,
-};
+use Xianghuawe\Archivable\Archivable;
+use Xianghuawe\Archivable\ModelsArchived;
 
 class ArchiveCommand extends Command
 {
@@ -35,7 +35,6 @@ class ArchiveCommand extends Command
     /**
      * Execute the console command.
      *
-     * @param  \Illuminate\Contracts\Events\Dispatcher  $events
      * @return void
      */
     public function handle(Dispatcher $events)
@@ -59,7 +58,7 @@ class ArchiveCommand extends Command
         $archiving = [];
 
         $events->listen(ModelsArchived::class, function ($event) use (&$archiving) {
-            if (! in_array($event->model, $archiving)) {
+            if (!in_array($event->model, $archiving)) {
                 $archiving[] = $event->model;
 
                 $this->newLine();
@@ -80,7 +79,6 @@ class ArchiveCommand extends Command
     /**
      * Archive the given model.
      *
-     * @param  string  $model
      * @return void
      */
     protected function archiveModel(string $model)
@@ -107,7 +105,7 @@ class ArchiveCommand extends Command
      */
     protected function models()
     {
-        if (! empty($models = $this->option('model'))) {
+        if (!empty($models = $this->option('model'))) {
             return collect($models)->filter(function ($model) {
                 return class_exists($model);
             })->values();
@@ -115,7 +113,7 @@ class ArchiveCommand extends Command
 
         $except = $this->option('except');
 
-        if (! empty($models) && ! empty($except)) {
+        if (!empty($models) && !empty($except)) {
             throw new InvalidArgumentException('The --models and --except options cannot be combined.');
         }
 
@@ -128,7 +126,7 @@ class ArchiveCommand extends Command
                     ['\\', ''],
                     Str::after($model->getRealPath(), realpath(app_path()) . DIRECTORY_SEPARATOR)
                 );
-            })->when(! empty($except), function ($models) use ($except) {
+            })->when(!empty($except), function ($models) use ($except) {
                 return $models->reject(function ($model) use ($except) {
                     return in_array($model, $except);
                 });
@@ -160,6 +158,7 @@ class ArchiveCommand extends Command
         $uses = class_uses_recursive($model);
 
         $usedArchivable = array_intersect([Archivable::class], $uses);
+
         return !empty($usedArchivable);
     }
 

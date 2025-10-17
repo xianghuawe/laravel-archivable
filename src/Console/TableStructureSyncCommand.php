@@ -1,12 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Xianghuawe\Archivable\Console;
 
 use Illuminate\Contracts\Events\Dispatcher;
-use Xianghuawe\Archivable\{
-    ModelsArchived,
-    ArchivableTableStructureSync,
-};
+use Xianghuawe\Archivable\ArchivableTableStructureSync;
+use Xianghuawe\Archivable\ModelsArchived;
 
 class TableStructureSyncCommand extends ArchiveCommand
 {
@@ -31,7 +31,6 @@ class TableStructureSyncCommand extends ArchiveCommand
     /**
      * Execute the console command.
      *
-     * @param  \Illuminate\Contracts\Events\Dispatcher  $events
      * @return void
      */
     public function handle(Dispatcher $events)
@@ -45,12 +44,12 @@ class TableStructureSyncCommand extends ArchiveCommand
         }
 
         $models->each(function ($model) {
-
             $model = new $model;
             $table = $model->getTable();
             // 1. 检查原表是否存在
             if (!$this->sourceTableExists($table)) {
                 $this->output->error("原库不存在表: {$table}");
+
                 return;
             }
 
@@ -58,6 +57,7 @@ class TableStructureSyncCommand extends ArchiveCommand
             if (!$this->destinationTableExists($table)) {
                 $this->createTable($table);
                 $this->output->success("成功创建表: {$table}");
+
                 return;
             }
 
@@ -65,12 +65,13 @@ class TableStructureSyncCommand extends ArchiveCommand
             $diff = $this->getStructureDiff($table);
             if (empty($diff)) {
                 $this->output->info("表结构一致，跳过: {$table}");
+
                 return;
             }
 
             // 4. 执行差异更新
             $this->applyDiff($table, $diff);
-            $this->output->success("成功更新表结构: {$table}（差异数: " . count($diff) . "）");
+            $this->output->success("成功更新表结构: {$table}（差异数: " . count($diff) . '）');
         });
 
         $events->forget(ModelsArchived::class);
