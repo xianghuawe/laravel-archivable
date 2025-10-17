@@ -5,6 +5,7 @@ namespace Xianghuawe\Archivable;
 use Illuminate\Contracts\Support\DeferrableProvider;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 use Xianghuawe\Archivable\Console\ArchiveCommand;
+use Xianghuawe\Archivable\Console\TableStructureSyncCommand;
 
 class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
 {
@@ -33,6 +34,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 ArchiveCommand::class,
+                TableStructureSyncCommand::class,
             ]);
         }
     }

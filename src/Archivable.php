@@ -9,30 +9,7 @@ use LogicException;
 
 trait Archivable
 {
-    /**
-     * Get archive table name
-     *
-     * @return string
-     */
-    public function getArchiveTable()
-    {
-        return $this->getTable();
-    }
-
-    /**
-     * check if origin table changed
-     *
-     * @param string $table1
-     * @param string $table2
-     * @return boolean
-     */
-    function isTableChanged(string $table)
-    {
-        $sql        = 'show columns from `%s`';
-        $table1Json = collect($this->getConnection()->select(sprintf($sql, $table)))->toJson();
-        $table2Json = collect(DB::connection(config('archive.db'))->select(sprintf($sql, $table)))->toJson();
-        return $table1Json !== $table2Json;
-    }
+    use ArchivableTableStructureSync;
 
     /**
      * archive all archivable models in the database.
@@ -49,7 +26,7 @@ trait Archivable
         }
         $archiveTableName = $this->getTable();
         if (Schema::connection(config('archive.db'))->hasTable($archiveTableName)) {
-            if ($this->isTableChanged($this->getTable())) {
+            if (empty($this->getStructureDiff($this->getTable()))) {
                 Log::warning('archive table ' . $archiveTableName . ' table structure is changed');
                 return 0;
             }
@@ -92,7 +69,7 @@ trait Archivable
      */
     public function archive()
     {
-        $archiveTableName = $this->getArchiveTable();
+        $archiveTableName = $this->getTable();
         return DB::connection(config('archive.db'))->table($archiveTableName)->insertOrIgnore($this->attributes);
     }
 }
