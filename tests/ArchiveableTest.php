@@ -90,11 +90,10 @@ class ArchiveTest extends TestCase
         $archiveModel->archiveAll();
 
         // 验证备份数据
-        $this->assertEquals(1, TestModel::count());
-        $totalBackedUp = DB::connection(config('archive.archive_db'))->table($archiveModel->getTable())->count();
+        $this->assertEquals(1, TestModel::count(), '无需备份的数据数量不一致');
+        $totalBackedUp = DB::connection(config('archive.db'))->table($archiveModel->getTable())->count();
         // 验证备份数据
-
-        $this->assertEquals($backupDataCount, $totalBackedUp, '备份数据数量与事件数量不一致');
+        $this->assertEquals($backupDataCount, $totalBackedUp, '实际备份数量不一致');
         $this->assertEquals($backupDataCount, $eventBackedUp, '备份数据数量与事件数量不一致');
     }
 }

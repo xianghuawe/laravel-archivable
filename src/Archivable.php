@@ -10,16 +10,6 @@ use LogicException;
 trait Archivable
 {
     /**
-     * Define archivable table name
-     *
-     * @return string
-     */
-    public function archivableTableName()
-    {
-        return $this->getTable() . '_archivable';
-    }
-
-    /**
      * Get archive table name
      *
      * @return string
@@ -40,7 +30,7 @@ trait Archivable
     {
         $sql        = 'show columns from `%s`';
         $table1Json = collect($this->getConnection()->select(sprintf($sql, $table)))->toJson();
-        $table2Json = collect(DB::connection(config('archive.archive_db'))->select(sprintf($sql, $table)))->toJson();
+        $table2Json = collect(DB::connection(config('archive.db'))->select(sprintf($sql, $table)))->toJson();
         return $table1Json !== $table2Json;
     }
 
@@ -58,7 +48,7 @@ trait Archivable
             return 0;
         }
         $archiveTableName = $this->getTable();
-        if (Schema::connection(config('archive.archive_db'))->hasTable($archiveTableName)) {
+        if (Schema::connection(config('archive.db'))->hasTable($archiveTableName)) {
             if ($this->isTableChanged($this->getTable())) {
                 Log::warning('archive table ' . $archiveTableName . ' table structure is changed');
                 return 0;
@@ -76,7 +66,7 @@ trait Archivable
                 break;
             }
             DB::transaction(function () use ($data, $archiveTableName, &$totalArchived) {
-                DB::connection(config('archive.archive_db'))->table($archiveTableName)->insertOrIgnore($data->map->getAttributes()->all());
+                DB::connection(config('archive.db'))->table($archiveTableName)->insertOrIgnore($data->map->getAttributes()->all());
                 $totalArchived += $this->archivable()->whereIn($this->getKeyName(), $data->pluck($this->getKeyName())->toArray())->forceDelete(); // 删除操作必须保证插入成功才能删除
             });
         }
@@ -103,6 +93,6 @@ trait Archivable
     public function archive()
     {
         $archiveTableName = $this->getArchiveTable();
-        return DB::connection(config('archive.archive_db'))->table($archiveTableName)->insertOrIgnore($this->attributes);
+        return DB::connection(config('archive.db'))->table($archiveTableName)->insertOrIgnore($this->attributes);
     }
 }
