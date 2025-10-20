@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Xianghuawe\Archivable\Tests;
 
 use Dotenv\Dotenv;
@@ -22,7 +20,8 @@ abstract class TestCase extends OrchestraTestCase
      *  Setup the test environment.
      */
     protected function setUp(): void // Load .env.testing file
-    {$dotenv = Dotenv::createImmutable(__DIR__ . '/../');
+    {
+        $dotenv = Dotenv::createImmutable(__DIR__ . '/../');
         $dotenv->load();
         parent::setUp();
 

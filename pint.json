@@ -15,7 +15,7 @@
         "concat_space": {
             "spacing": "one"
         },
-        "declare_strict_types": true,
+        "declare_strict_types": false,
         "indentation_type": true,
         "line_ending": true,
         "method_argument_space": {

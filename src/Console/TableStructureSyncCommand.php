@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Xianghuawe\Archivable\Console;
 
 use Illuminate\Contracts\Events\Dispatcher;
