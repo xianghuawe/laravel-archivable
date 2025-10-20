@@ -39,7 +39,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
             ]);
         }
 
-        // 2. 注册定时任务调度（关键：向 Laravel 项目的调度器添加任务）
+        // 注册定时任务调度（关键：向 Laravel 项目的调度器添加任务）
         $this->app->booted(function () {
             $schedule = $this->app->make(Schedule::class);
             // 定义任务执行频率（例如每天凌晨3点）
@@ -47,12 +47,17 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
                 ->dailyAt(config('archive.schedule_daily_at.archive_structure_sync'))
                 ->when(function () {
                     return config('archive.enable');
-                })->name('同步注册了archive的model的表结构');
+                })
+                ->name('同步注册了archive的model的表结构')
+                ->onOneServer()
+                ->withoutOverlapping();
             $schedule->command('model:archive')
                 ->dailyAt(config('archive.schedule_daily_at.archive'))
                 ->when(function () {
                     return config('archive.enable');
-                })->name('归档注册了archive的model的数据');
+                })->name('归档注册了archive的model的数据')
+                ->onOneServer()
+                ->withoutOverlapping();
         });
     }
 
