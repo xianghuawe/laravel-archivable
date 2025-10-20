@@ -39,6 +39,17 @@ trait ArchivableTableStructureSync
     {
         $createSql = DB::connection()
             ->selectOne("SHOW CREATE TABLE `{$table}`")->{'Create Table'};
+        // 移除外键约束定义（各种形式）
+        $createSql = preg_replace('/,\s*CONSTRAINT\s+`[^`]+`\s+FOREIGN\s+KEY\s*\([^\)]+\)\s+REFERENCES\s+`[^`]+`\s*\([^\)]+\)\s*(?:ON\s+(?:DELETE|UPDATE)\s+[^\s]+\s*)*/i', '', $createSql);
+        $createSql = preg_replace('/,\s*FOREIGN\s+KEY\s*\([^\)]+\)\s+REFERENCES\s+`[^`]+`\s*\([^\)]+\)\s*(?:ON\s+(?:DELETE|UPDATE)\s+[^\s]+\s*)*/i', '', $createSql);
+
+        // 清理多余的逗号和空白字符
+        $createSql = preg_replace('/,\s*\)/', ')', $createSql);
+
+        // 确保SQL以分号结尾
+        if (substr(trim($createSql), -1) !== ';') {
+            $createSql .= ';';
+        }
         DB::connection(config('archive.db'))->statement($createSql);
     }
 
@@ -139,7 +150,13 @@ trait ArchivableTableStructureSync
         $indexes = [];
         $rows = DB::connection($conn)->select("SHOW INDEX FROM `{$table}`");
         foreach ($rows as $row) {
-            if ($row->Key_name === 'PRIMARY') {
+            if (
+                $row->Key_name === 'PRIMARY' ||
+                strpos($row->Key_name, '_foreign') !== false ||
+                strpos($row->Key_name, '_fk_') !== false ||
+                strpos($row->Key_name, 'foreign_') !== false ||
+                strpos($row->Key_name, '_id_foreign') !== false
+            ) {
                 continue;
             } // 主键通常在创建表时已处理
             $indexes[$row->Key_name] = [
