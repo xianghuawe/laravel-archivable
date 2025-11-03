@@ -235,4 +235,38 @@ trait ArchivableTableStructureSync
 
         return $targetDefault != $sourceDefault;
     }
+
+    /**
+     * @param  \Illuminate\Console\OutputStyle|null  $output
+     * @return void
+     */
+    public function syncStructure($output = null)
+    {
+        // 1. 检查原表是否存在
+        if (!$this->sourceTableExists($this->getTable())) {
+            $output?->error("原库不存在表: {$this->getTable()}");
+
+            return;
+        }
+
+        // 2. 目标表不存在 → 直接创建
+        if (!$this->destinationTableExists($this->getTable())) {
+            $this->createTable($this->getTable());
+            $output?->success("成功创建表: {$this->getTable()}");
+
+            return;
+        }
+
+        // 3. 目标表已存在 → 对比差异并更新
+        $diff = $this->getStructureDiff($this->getTable());
+        if (empty($diff)) {
+            $output?->info("表结构一致，跳过: {$this->getTable()}");
+
+            return;
+        }
+
+        // 4. 执行差异更新
+        $this->applyDiff($this->getTable(), $diff);
+        $output?->success("成功更新表结构: {$this->getTable()}（差异数: " . count($diff) . '）');
+    }
 }
