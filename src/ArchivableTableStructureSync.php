@@ -6,20 +6,14 @@ use Illuminate\Support\Facades\DB;
 
 trait ArchivableTableStructureSync
 {
-    /**
-     * 检查表是否存在
-     */
-    protected function tableExists(string $conn, string $table): bool
-    {
-        return DB::connection($conn)->getDoctrineSchemaManager()->tablesExist($table);
-    }
+    use ArchivableDb;
 
     /**
      * 检查表是否存在
      */
     protected function sourceTableExists(string $table): bool
     {
-        return DB::connection()->getDoctrineSchemaManager()->tablesExist($table);
+        return $this->getSourceDB()->getDoctrineSchemaManager()->tablesExist($table);
     }
 
     /**
@@ -27,7 +21,7 @@ trait ArchivableTableStructureSync
      */
     protected function destinationTableExists(string $table): bool
     {
-        return DB::connection(config('archive.db'))->getDoctrineSchemaManager()->tablesExist($table);
+        return $this->getArchiveDB()->getDoctrineSchemaManager()->tablesExist($table);
     }
 
     /**
@@ -35,7 +29,7 @@ trait ArchivableTableStructureSync
      */
     protected function createTable(string $table): void
     {
-        $createSql = DB::connection()
+        $createSql = $this->getSourceDB()
             ->selectOne("SHOW CREATE TABLE `{$table}`")->{'Create Table'};
         // 移除外键约束定义（各种形式）
         $createSql = preg_replace('/,\s*CONSTRAINT\s+`[^`]+`\s+FOREIGN\s+KEY\s*\([^\)]+\)\s+REFERENCES\s+`[^`]+`\s*\([^\)]+\)\s*(?:ON\s+(?:DELETE|UPDATE)\s+[^\s]+\s*)*/i', '', $createSql);
@@ -48,7 +42,7 @@ trait ArchivableTableStructureSync
         if (substr(trim($createSql), -1) !== ';') {
             $createSql .= ';';
         }
-        DB::connection(config('archive.db'))->statement($createSql);
+        $this->getArchiveDB()->statement($createSql);
     }
 
     /**
@@ -59,8 +53,8 @@ trait ArchivableTableStructureSync
         $diff = [];
 
         // 获取原表和目标表的字段信息
-        $sourceColumns = $this->getTableColumns(null, $table);
-        $targetColumns = $this->getTableColumns(config('archive.db'), $table);
+        $sourceColumns = $this->getTableColumns($this->getSourceDBConnectionName(), $table);
+        $targetColumns = $this->getTableColumns($this->getArchiveDBConnectionName(), $table);
 
         // 1. 检查目标表是否缺少字段
         foreach ($sourceColumns as $colName => $sourceCol) {
@@ -107,8 +101,8 @@ trait ArchivableTableStructureSync
         }
 
         // 4. 对比索引差异（简化版，可扩展）
-        $sourceIndexes = $this->getTableIndexes(null, $table);
-        $targetIndexes = $this->getTableIndexes(config('archive.db'), $table);
+        $sourceIndexes = $this->getTableIndexes($this->getSourceDBConnectionName(), $table);
+        $targetIndexes = $this->getTableIndexes($this->getArchiveDBConnectionName(), $table);
         foreach ($sourceIndexes as $indexName => $sourceIndex) {
             if (!isset($targetIndexes[$indexName])) {
                 $diff[] = [
@@ -177,7 +171,7 @@ trait ArchivableTableStructureSync
                 continue;
             }
             // 执行ALTER TABLE语句
-            DB::connection(config('archive.db'))->statement("ALTER TABLE `{$table}` {$item['sql']}");
+            $this->getArchiveDB()->statement("ALTER TABLE `{$table}` {$item['sql']}");
         }
     }
 

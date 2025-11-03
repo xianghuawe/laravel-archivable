@@ -3,7 +3,6 @@
 namespace Xianghuawe\Archivable;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use LogicException;
 
 trait Archivable
@@ -14,6 +13,8 @@ trait Archivable
      * archive all archivable models in the database.
      *
      * @return int
+     *
+     * @throws \Throwable
      */
     public function archiveAll(?int $chunkSize = null)
     {
@@ -23,7 +24,7 @@ trait Archivable
             return 0;
         }
         $archiveTableName = $this->getTable();
-        if (Schema::connection(config('archive.db'))->hasTable($archiveTableName)) {
+        if ($this->getArchiveSchema()->hasTable($archiveTableName)) {
             if (!empty($this->getStructureDiff($this->getTable()))) {
                 throw new LogicException('archive table ' . $archiveTableName . ' table structure is changed');
             }
@@ -39,7 +40,7 @@ trait Archivable
                 break;
             }
             DB::transaction(function () use ($data, $archiveTableName, &$totalArchived) {
-                DB::connection(config('archive.db'))->table($archiveTableName)->insertOrIgnore($data->map->getAttributes()->all());
+                $this->getArchiveDB()->table($archiveTableName)->insertOrIgnore($data->map->getAttributes()->all());
                 $totalArchived += $this->archivable()->whereIn($this->getKeyName(), $data->pluck($this->getKeyName())->toArray())->forceDelete(); // 删除操作必须保证插入成功才能删除
             });
         }
@@ -68,6 +69,6 @@ trait Archivable
     {
         $archiveTableName = $this->getTable();
 
-        return DB::connection(config('archive.db'))->table($archiveTableName)->insertOrIgnore($this->attributes);
+        return $this->getArchiveDB()->table($archiveTableName)->insertOrIgnore($this->attributes);
     }
 }
