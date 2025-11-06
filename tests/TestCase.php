@@ -20,16 +20,14 @@ abstract class TestCase extends OrchestraTestCase
      *  Setup the test environment.
      */
     protected function setUp(): void // Load .env.testing file
-    {$dotenv = Dotenv::createImmutable(__DIR__ . '/../');
+    {
+        $dotenv = Dotenv::createImmutable(__DIR__ . '/../');
         $dotenv->load();
         parent::setUp();
 
         $default = config('database.default');
         // 为默认数据库运行迁移
         $this->runMigrationsOnConnection('default');
-
-        // 为归档数据库运行迁移
-        $this->runMigrationsOnConnection('archive');
         config(['database.default' => $default]);
     }
 

@@ -2,45 +2,43 @@
 
 namespace Xianghuawe\Archivable\Tests;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
-use Xianghuawe\Archivable\Archivable;
+use Xianghuawe\Archivable\ArchivableTableStructureSync;
 use Xianghuawe\Archivable\ModelsArchived;
-
-// 创建测试模型
-class TestModel extends Model
-{
-    use Archivable;
-
-    protected $table = 'test_models';
-
-    /**
-     * Get the archivable model query.
-     *
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function archivable()
-    {
-        return $this->query()->where('created_at', '<', now()->subMonths(6));
-    }
-}
+use Xianghuawe\Archivable\Tests\Models\TestModel;
 
 class ArchiveTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, ArchivableTableStructureSync;
+
+    private function getConnectionName()
+    {
+        return config('database.default');
+    }
 
     /** @test */
+    public function sync_archive_table_structure()
+    {
+        $testModel = new TestModel();
+
+        Artisan::call('model:archive-structure-sync --model=' . str_replace('\\', '\\\\', get_class($testModel)));
+
+        $this->assertTrue(empty($this->getStructureDiff($testModel->getTable())), '归档表结构与模型结构不一致');
+    }
+
+    /**
+     * @test
+     * @depends sync_archive_table_structure
+     */
     public function no_need_archive_any_data()
     {
         // 准备测试数据
         $data = [
             ['name' => 'fake data', 'created_at' => now()->subMonths(1), 'data' => json_encode(['key' => 'value'])],
             ['name' => 'fake data', 'created_at' => now()->subMonths(1), 'data' => json_encode(['key' => 'value'])],
-            ['name' => 'fake data', 'created_at' => now()->subMonths(1), 'data' => json_encode(['key' => 'value'])],
-            ['name' => 'fake data', 'created_at' => now()->subMonths(1), 'data' => json_encode(['key' => 'value'])],
-            ['name' => 'fake data', 'created_at' => now()->subMonths(2), 'data' => json_encode(['key' => 'value'])],
         ];
 
         TestModel::insert($data);
@@ -54,7 +52,11 @@ class ArchiveTest extends TestCase
         $this->assertDatabaseCount($archiveModel->getTable(), count: count($data));
     }
 
-    /** @test */
+
+    /**
+     * @test
+     * @depends sync_archive_table_structure
+     */
     public function need_archive_some_data()
     {
         $eventBackedUp = 0;

@@ -9,19 +9,35 @@ trait ArchivableTableStructureSync
     use ArchivableDb;
 
     /**
-     * 检查表是否存在
+     * 检查表是否存在 - 修复参数绑定问题
      */
     protected function sourceTableExists(string $table): bool
     {
-        return $this->getSourceDB()->getDoctrineSchemaManager()->tablesExist($table);
+        $db = $this->getSourceDB();
+        $prefix = $db->getTablePrefix();
+        $fullTable = $prefix . $table;
+        
+        // 使用字符串拼接构建SHOW TABLES LIKE语句
+        // 需要注意在SHOW TABLES LIKE后使用单引号包围表名
+        $result = $db->select("SHOW TABLES LIKE '$fullTable'");
+        
+        return !empty($result);
     }
 
     /**
-     * 检查表是否存在
+     * 检查表是否存在 - 修复参数绑定问题
      */
     protected function destinationTableExists(string $table): bool
     {
-        return $this->getArchiveDB()->getDoctrineSchemaManager()->tablesExist($table);
+        $db = $this->getArchiveDB();
+        $prefix = $db->getTablePrefix();
+        $fullTable = $prefix . $table;
+        
+        // 使用字符串拼接构建SHOW TABLES LIKE语句
+        // 需要注意在SHOW TABLES LIKE后使用单引号包围表名
+        $result = $db->select("SHOW TABLES LIKE '$fullTable'");
+        
+        return !empty($result);
     }
 
     /**
