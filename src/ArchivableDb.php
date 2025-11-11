@@ -48,4 +48,24 @@ trait ArchivableDb
     {
         return Schema::connection($this->getSourceDBConnectionName());
     }
+
+    /**
+     * 要归档的数据表
+     *
+     * @return \Illuminate\Database\Eloquent\Model|string
+     */
+    public function getSourceTable()
+    {
+        return $this->getTable();
+    }
+
+    /**
+     * 要归档到的数据表
+     *
+     * @return \Illuminate\Database\Eloquent\Model|string
+     */
+    public function getDestinationTable()
+    {
+        return $this->getTable();
+    }
 }

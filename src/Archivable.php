@@ -10,6 +10,23 @@ trait Archivable
     use ArchivableTableStructureSync;
 
     /**
+     * @param $destinationTable
+     *
+     * @return void
+     */
+    public function makeSureDestinationTableExists($destinationTable)
+    {
+        if ($this->getArchiveSchema()->hasTable($destinationTable)) {
+            $diff = $this->getStructureDiff($this->getSourceTable(), $destinationTable);
+            if (!empty($diff)) {
+                $this->applyDiff($destinationTable, $diff);
+            }
+        } else {
+            $this->createTable($this->getSourceTable(), $destinationTable);
+        }
+    }
+
+    /**
      * archive all archivable models in the database.
      *
      * @return int
@@ -18,29 +35,23 @@ trait Archivable
      */
     public function archiveAll(?int $chunkSize = null)
     {
-        $chunkSize = $chunkSize ?? config('archive.chunk_size');
-        $total = $this->archivable()->count();
+        $chunkSize = $chunkSize ?? config('archive.default_chunk_size');
+        $total     = $this->archivable()->count();
         if ($total == 0) {
             return 0;
         }
-        $archiveTableName = $this->getTable();
-        if ($this->getArchiveSchema()->hasTable($archiveTableName)) {
-            if (!empty($this->getStructureDiff($this->getTable()))) {
-                throw new LogicException('archive table ' . $archiveTableName . ' table structure is changed');
-            }
-        } else {
-            throw new LogicException('archive table ' . $archiveTableName . ' does not exist');
-        }
+        $archiveTableName = $this->getDestinationTable();
+        $this->makeSureDestinationTableExists($archiveTableName);
 
         $totalArchived = 0;
-        $runTimes = 1000; // 设置运行次数最大上限, 避免归档失败无限循环
+        $runTimes      = 1000; // 设置运行次数最大上限, 避免归档失败无限循环
         while ($runTimes--) {
             $data = $this->archivable()->limit($chunkSize)->get();
             if ($data->count() == 0) {
                 break;
             }
-            DB::transaction(function () use ($data, $archiveTableName, &$totalArchived) {
-                $this->getArchiveDB()->table($archiveTableName)->insertOrIgnore($data->map->getAttributes()->all());
+            DB::transaction(function () use ($data, &$totalArchived) {
+                $this->getArchiveDB()->table($this->getDestinationTable())->insertOrIgnore($data->map->getAttributes()->all());
                 $totalArchived += $this->archivable()->whereIn($this->getKeyName(), $data->pluck($this->getKeyName())->toArray())->forceDelete(); // 删除操作必须保证插入成功才能删除
             });
         }
