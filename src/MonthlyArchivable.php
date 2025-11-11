@@ -10,16 +10,39 @@ trait MonthlyArchivable
 {
     use Archivable;
 
-    protected string $dateField = 'created_at';
-
-    protected int $archiveMonthLimit = 6;
-
-    public function getDestinationTable()
+    /**
+     * 按月份备份的时间依据字段
+     *
+     * @return string
+     */
+    public function getDateField(): string
     {
-        return $this->getDestinationTableByDate(now()->startOfMonth()->subMonths($this->archiveMonthLimit));
+        return 'created_at';
     }
 
     /**
+     * 归档多少月份之前的数据
+     *
+     * @return \Illuminate\Support\Carbon
+     */
+    public function getArchiveMonthLimit()
+    {
+        return now()->subMonths(6);
+    }
+
+    /**
+     * 默认当前要归档到的表名
+     *
+     * @return string
+     */
+    public function getDestinationTable()
+    {
+        return $this->getDestinationTableByDate($this->getArchiveMonthLimit());
+    }
+
+    /**
+     * 根据日期生成归档表名
+     *
      * @param $date
      *
      * @return string
@@ -36,7 +59,7 @@ trait MonthlyArchivable
      */
     public function archivable()
     {
-        $query = static::where($this->dateField, '<', now()->subMonths($this->archiveMonthLimit)->toDateTimeString());
+        $query = static::where($this->getDateField(), '<', $this->getArchiveMonthLimit()->toDateTimeString());
         if (in_array(
             SoftDeletes::class,
             class_uses($this)
@@ -48,7 +71,7 @@ trait MonthlyArchivable
     }
 
     /**
-     * archive all archivable models in the database.
+     * 归档当前可归档数据
      *
      * @return int
      *
@@ -63,8 +86,8 @@ trait MonthlyArchivable
         }
 
         $dates = $this->archivable()
-            ->groupByRaw("date_format( $this->dateField,'%Y-%m')")
-            ->selectRaw("date_format($this->dateField,'%Y-%m') as date")
+            ->groupByRaw("date_format( {$this->getDateField()},'%Y-%m')")
+            ->selectRaw("date_format({$this->getDateField()},'%Y-%m') as date")
             ->pluck('date');
 
         $totalArchived = 0;
@@ -76,8 +99,8 @@ trait MonthlyArchivable
             $runTimes = 1000; // 设置运行次数最大上限, 避免归档失败无限循环
             while ($runTimes--) {
                 $data = $this->archivable()
-                    ->where($this->dateField, '>=', $dateObj->copy()->toDateTimeString())
-                    ->where($this->dateField, '<', $dateObj->copy()->addMonth()->toDateTimeString())
+                    ->where($this->getDateField(), '>=', $dateObj->copy()->toDateTimeString())
+                    ->where($this->getDateField(), '<', $dateObj->copy()->addMonth()->toDateTimeString())
                     ->limit($chunkSize)
                     ->get();
                 if ($data->count() == 0) {
@@ -86,7 +109,7 @@ trait MonthlyArchivable
                 try {
                     $this->getArchiveDB()->table($archiveTableName)->insertOrIgnore($data->map->getAttributes()->all());
                     $totalArchived += $this->archivable()->whereIn($this->getKeyName(), $data->pluck($this->getKeyName())->toArray())->forceDelete(); // 删除操作必须保证插入成功才能删除
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     Log::error($e);
                 }
             }
@@ -99,13 +122,13 @@ trait MonthlyArchivable
 
 
     /**
-     * backup the model in the database.
+     * 归档当前model
      *
      * @return bool|null
      */
     public function archive()
     {
-        $archiveTableName = $this->getDestinationTableByDate(Carbon::parse($this->${$this->dateField}));
+        $archiveTableName = $this->getDestinationTableByDate(Carbon::parse($this->${$this->getDateField()}));
         $this->makeSureDestinationTableExists($archiveTableName);
         return $this->getArchiveDB()->table($archiveTableName)->insertOrIgnore($this->attributes);
     }
