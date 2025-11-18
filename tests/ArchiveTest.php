@@ -8,7 +8,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Xianghuawe\Archivable\ArchivableTableStructureSync;
 use Xianghuawe\Archivable\ModelsArchived;
+use Xianghuawe\Archivable\Tests\Models\MonthlyTestModel;
 use Xianghuawe\Archivable\Tests\Models\TestModel;
+use Xianghuawe\Archivable\Tests\Models\UserModel;
+use Xianghuawe\Archivable\Tests\Models\UserMonthlyModel;
 
 class ArchiveTest extends TestCase
 {
@@ -101,5 +104,32 @@ class ArchiveTest extends TestCase
         // 验证备份数据
         $this->assertEquals($backupDataCount, $totalBackedUp, '实际备份数量不一致');
         $this->assertEquals($backupDataCount, $eventBackedUp, '备份数据数量与事件数量不一致');
+    }
+
+    /**
+     * @test
+     *
+     * @depends sync_archive_table_structure
+     */
+    public function test_fk_archivable()
+    {
+
+        // 准备测试数据
+        TestModel::insert(['name' => 'fake data', 'created_at' => now()->subMonths(7), 'data' => json_encode(['key' => 'value'])]);
+
+        $testModel = TestModel::first();
+
+        $userMonthlyTestModel = new UserModel([
+            'test_model_id' => $testModel->id,
+        ]);
+
+        $userMonthlyTestModel->save();
+
+        // 执行备份
+        $needBackupCount = $testModel->archivable()->count();
+        $this->assertEquals($needBackupCount, 1, '备份数据数量与模型数量不一致');
+        $testModel->archiveAll();
+        // 验证备份数据
+        $this->assertDatabaseCount($testModel->getTable(), count: 0);
     }
 }

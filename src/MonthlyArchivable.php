@@ -85,6 +85,7 @@ trait MonthlyArchivable
             return 0;
         }
 
+        $this->getSourceDB()->statement('SET FOREIGN_KEY_CHECKS=0;'); // 禁用外健检查
         $dates = $this->archivable()
             ->groupByRaw("date_format( {$this->getDateField()},'%Y-%m')")
             ->selectRaw("date_format({$this->getDateField()},'%Y-%m') as date")
@@ -111,9 +112,11 @@ trait MonthlyArchivable
                     $totalArchived += $this->archivable()->whereIn($this->getKeyName(), $data->pluck($this->getKeyName())->toArray())->forceDelete(); // 删除操作必须保证插入成功才能删除
                 } catch (\Throwable $e) {
                     Log::error($e);
+                    echo $e->getMessage();
                 }
             }
         }
+        $this->getSourceDB()->statement('SET FOREIGN_KEY_CHECKS=1;'); // 还原
 
         event(new ModelsArchived(static::class, $totalArchived));
 

@@ -43,6 +43,7 @@ trait Archivable
         $archiveTableName = $this->getDestinationTable();
         $this->makeSureDestinationTableExists($archiveTableName);
 
+        $this->getSourceDB()->statement('SET FOREIGN_KEY_CHECKS=0;'); // 禁用外健检查
         $totalArchived = 0;
         $runTimes      = 1000; // 设置运行次数最大上限, 避免归档失败无限循环
         while ($runTimes--) {
@@ -50,11 +51,10 @@ trait Archivable
             if ($data->count() == 0) {
                 break;
             }
-            DB::transaction(function () use ($data, &$totalArchived) {
-                $this->getArchiveDB()->table($this->getDestinationTable())->insertOrIgnore($data->map->getAttributes()->all());
-                $totalArchived += $this->archivable()->whereIn($this->getKeyName(), $data->pluck($this->getKeyName())->toArray())->forceDelete(); // 删除操作必须保证插入成功才能删除
-            });
+            $this->getArchiveDB()->table($this->getDestinationTable())->insertOrIgnore($data->map->getAttributes()->all());
+            $totalArchived += $this->archivable()->whereIn($this->getKeyName(), $data->pluck($this->getKeyName())->toArray())->forceDelete();
         }
+        $this->getSourceDB()->statement('SET FOREIGN_KEY_CHECKS=1;'); // 还原
 
         event(new ModelsArchived(static::class, $totalArchived));
 
