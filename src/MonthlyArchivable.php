@@ -27,7 +27,7 @@ trait MonthlyArchivable
      */
     public function getArchiveMonthLimit()
     {
-        return now()->subMonths(6);
+        return today()->subMonths(6);
     }
 
     /**

@@ -15,7 +15,7 @@ trait DateFieldArchivable
 
     public function getDateLimit()
     {
-        return now()->subMonths(6);
+        return today()->subMonths(6);
     }
 
     /**
