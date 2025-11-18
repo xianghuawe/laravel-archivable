@@ -97,23 +97,17 @@ trait MonthlyArchivable
             $archiveTableName = $this->getDestinationTableByDate($dateObj);
             $this->makeSureDestinationTableExists($archiveTableName);
 
-            $runTimes = 1000; // 设置运行次数最大上限, 避免归档失败无限循环
-            while ($runTimes--) {
+            while (true) {
                 $data = $this->archivable()
                     ->where($this->getDateField(), '>=', $dateObj->copy()->toDateTimeString())
                     ->where($this->getDateField(), '<', $dateObj->copy()->addMonth()->toDateTimeString())
                     ->limit($chunkSize)
                     ->get();
-                if ($data->count() == 0) {
+                if ($data->isEmpty()) {
                     break;
                 }
-                try {
-                    $this->getArchiveDB()->table($archiveTableName)->insertOrIgnore($data->map->getAttributes()->all());
-                    $totalArchived += $this->archivable()->whereIn($this->getKeyName(), $data->pluck($this->getKeyName())->toArray())->forceDelete(); // 删除操作必须保证插入成功才能删除
-                } catch (\Throwable $e) {
-                    Log::error($e);
-                    echo $e->getMessage();
-                }
+                $this->getArchiveDB()->table($archiveTableName)->insertOrIgnore($data->map->getAttributes()->all());
+                $totalArchived += $this->archivable()->whereIn($this->getKeyName(), $data->pluck($this->getKeyName())->toArray())->forceDelete(); // 删除操作必须保证插入成功才能删除
             }
         }
         $this->getSourceDB()->statement('SET FOREIGN_KEY_CHECKS=1;'); // 还原

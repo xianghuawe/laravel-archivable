@@ -45,10 +45,9 @@ trait Archivable
 
         $this->getSourceDB()->statement('SET FOREIGN_KEY_CHECKS=0;'); // 禁用外健检查
         $totalArchived = 0;
-        $runTimes      = 1000; // 设置运行次数最大上限, 避免归档失败无限循环
-        while ($runTimes--) {
+        while (true) {
             $data = $this->archivable()->limit($chunkSize)->get();
-            if ($data->count() == 0) {
+            if ($data->isEmpty()) {
                 break;
             }
             $this->getArchiveDB()->table($this->getDestinationTable())->insertOrIgnore($data->map->getAttributes()->all());
